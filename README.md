@@ -12,4 +12,4 @@ Prototype backend pour GPS position collection, validation, et storage.
 Voir [docs/j2-conception.md](docs/j2-conception.md) pour l'architecture, model et test plan.
 
 ## Status
-Semaine 1 en progrès.
+Semaine 1 en progrès
