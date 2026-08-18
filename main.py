@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 app = FastAPI()
 
-from sqlmodel import SQLModel, Field, create_engine, Session
+from sqlmodel import SQLModel, Field, create_engine, Session, select
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 import uuid
@@ -29,6 +29,15 @@ SQLModel.metadata.create_all(engine)
 @app.post("/position")
 def create_position(position: Position):
     try:
+        if not (-90 <= position.latitude <= 90):
+            raise ValueError("Latitude hors limites")
+        if not (-180 <= position.longitude <= 180):
+            raise ValueError("Longitude hors limites")
+        if position.accuracy is not None and position.accuracy < 0:
+            raise ValueError("Accuracy est tjrs positive")
+        if position.speed is not None and position.speed < 0:
+            raise ValueError("Speed est tjrs positive")
+
         if isinstance(position.timestamp, str):
             position.timestamp = datetime.fromisoformat( position.timestamp )
         if position.timestamp.tzinfo is None:
@@ -49,3 +58,12 @@ def create_position(position: Position):
     except Exception as e:
         logger.error(f"Impossible d'enregistrer la position de l'appareil {position.device_id}: {e}")
         raise
+
+@app.get("/position/{device_id}")
+def get_last_stored_pos(device_id: str):
+    with Session(engine) as session:
+        stmt = select(Position).where(Position.device_id == device_id).order_by(Position.timestamp.desc())
+        pos = session.exec(stmt).first()
+        if not pos:
+            raise HTTPException(status_code=404, detail="Aucune position trouvee pour cet appareil")
+        return pos
