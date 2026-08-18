@@ -1,16 +1,13 @@
 # Rapport de tests — Semaine 1
 
-Zouhair Messoudi — Stage R&D GPS
-Semaine du [date début] au [date fin]
+Zouhair Messoudi — Stage
 
-## Ce qui a été fait cette semaine
-
+## Ce qui a été fait cette semaine (en retard)
 J'ai mis en place la chaîne de base : un simulateur qui envoie des positions GPS
 (latitude, longitude, timestamp, accuracy, speed) vers une API FastAPI, qui valide
 les données et les enregistre dans une base SQLite.
 
-Stack utilisée : FastAPI + SQLModel + SQLite, pas encore de frontend (prévu semaine 2,
-volontairement minimal comme demandé).
+Stack utilisée : FastAPI + SQLModel + SQLite, pas encore de frontend.
 
 ## Tests effectués
 
