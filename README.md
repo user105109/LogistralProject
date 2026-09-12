@@ -1,4 +1,4 @@
-# GPS Tracker — Prototype (Logistral R&D)
+# GPS Tracker — Prototype (Logistral)
 
 Ça, c'est le prototype que j'ai développé pendant mon stage pour le module de
 tracking GPS de Logistral. L'idée : un device (ou un simulateur pour l'instant)
