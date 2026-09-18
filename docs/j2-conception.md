@@ -1,35 +1,34 @@
 # J2 — Conception
 
-## Architecture (schéma)
+## Comment ça marche
 
-[Simulateur GPS] --HTTP POST--> [API FastAPI] --> [Base SQLite]
-                                      |
-                                 [Validation Pydantic]
+Le simulateur (ou le téléphone) envoie une position GPS toutes les 5 secondes
+à l'API. L'API vérifie que la position est correcte, et si oui, l'enregistre
+dans la base SQLite. Si la position est bizarre (coordonnées impossibles,
+date qui a pas de sens, etc.), elle est rejetée avec une erreur 422.
 
-- Le simulateur envoie une position toutes les 5 secondes.
-- L'API valide chaque position reçue (types, plages de valeurs).
-- Une position valide est stockée dans SQLite ; une position invalide est rejetée (422).
+## Ce qu'on envoie comme position
 
-## Modèle GPS (contrat de données)
+| Champ | Type | Obligatoire | Règle |
+|---|---|---|---|
+| device_id | texte | oui | - |
+| latitude | nombre | oui | entre -90 et 90 |
+| longitude | nombre | oui | entre -180 et 180 |
+| timestamp | date | oui | format ISO 8601, pas trop vieux ni dans le futur |
+| accuracy | nombre | non | positif |
+| speed | nombre | non | positif |
 
-| Champ      | Type     | Obligatoire | Contrainte           |
-|------------|----------|-------------|-----------------------|
-| device_id  | string   | oui         | -                      |
-| latitude   | float    | oui         | -90 à 90               |
-| longitude  | float    | oui         | -180 à 180             |
-| timestamp  | datetime | oui         | format ISO 8601        |
-| accuracy   | float    | non         | >= 0                   |
-| speed      | float    | non         | >= 0                   |
+## Tests à faire
 
-## Plan de tests
-
-| Cas de test                          | Entrée                              | Résultat attendu |
-|---------------------------------------|--------------------------------------|-------------------|
-| Position valide                       | Tous les champs corrects             | 200, position enregistrée avec id |
-| device_id manquant                    | device_id absent                     | 422 |
-| latitude hors limite                  | latitude = 999                       | 422 |
-| longitude hors limite                 | longitude = -200                     | 422 |
-| accuracy négative                     | accuracy = -1                        | 422 |
-| speed négative                        | speed = -5                           | 422 |
-| timestamp mal formé                   | timestamp = "hier"                   | 422 |
-| Champs optionnels absents             | accuracy et speed absents            | 200, valeurs null en base |
+| Test | Entrée | Résultat attendu |
+|---|---|---|
+| Position normale | tout est correct | 200, position enregistrée |
+| device_id manquant | device_id absent | 422 |
+| latitude bizarre | latitude = 999 | 422 |
+| longitude bizarre | longitude = -200 | 422 |
+| accuracy négative | accuracy = -1 | 422 |
+| speed négative | speed = -5 | 422 |
+| timestamp cassé | timestamp = "hier" | 422 |
+| timestamp trop vieux | plus de 24h | 422 |
+| timestamp dans le futur | + de 5 min | 422 |
+| accuracy/speed absents | pas grave, c'est optionnel | 200, valeurs vides |

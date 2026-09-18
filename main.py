@@ -141,16 +141,3 @@ def get_history(device_id: str, start: datetime = None, end: datetime = None):
             raise HTTPException(status_code=404, detail="Aucune position dans cette periode")
 
         return positions
-
-
-
-
-
-
-
-
-
-
-
-
-        return pos
