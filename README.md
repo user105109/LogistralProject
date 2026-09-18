@@ -19,7 +19,6 @@ selon les besoins du client. Le travail sérieux est côté backend.
 
 ```bash
 python -m venv venv
-# activer le venv selon ton OS
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
