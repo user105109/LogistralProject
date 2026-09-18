@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>GPS Tracker — Logistral</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+
+  <h1 class="text-2xl font-bold mb-4">Prototype d'un GPS Tracker</h1>
+
+  <div class="mb-4">
+    <span class="font-semibold">Device:</span> camion-1
+    <span id="status" class="ml-4 px-2 py-1 rounded text-sm bg-gray-300">chargement...</span>
+  </div>
+
+  <div id="map" class="w-full h-96 rounded shadow"></div>
+
+  <script>
+    const API_URL = "/position/camion-1";
+    const map = L.map('map').setView([33.5731, -7.5898], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    let marker = L.marker([33.5731, -7.5898]).addTo(map);
+
+    let lastTimestamp = null;
+
+    const statusLabels = {
+      en_ligne: { text: "en ligne", class: "bg-green-200 text-green-800" },
+      signal_interrompu: { text: "signal interrompu", class: "bg-yellow-200 text-yellow-800" },
+      hors_ligne: { text: "hors ligne", class: "bg-red-200 text-red-800" },
+      signal_faible: { text: "signal faible", class: "bg-orange-200 text-orange-800" },
+    };
+
+    async function fetchPosition() {
+      try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error("no data");
+        const data = await res.json();
+
+        if (data.timestamp === lastTimestamp) return;
+        lastTimestamp = data.timestamp;
+
+        marker.setLatLng([data.latitude, data.longitude]);
+        map.setView([data.latitude, data.longitude]);
+
+        const label = statusLabels[data.status] || { text: data.status, class: "bg-gray-200" };
+        document.getElementById("status").textContent =
+          `${label.text} — dernière position: ${new Date(data.timestamp).toLocaleTimeString()} — vitesse: ${data.speed ?? "N/A"} km/h`;
+        document.getElementById("status").className =
+          `ml-4 px-2 py-1 rounded text-sm ${label.class}`;
+      } catch (e) {
+        document.getElementById("status").textContent = "erreur / pas de connexion a l'API";
+        document.getElementById("status").className = "ml-4 px-2 py-1 rounded text-sm bg-gray-400 text-white";
+      }
+    }
+
+    function startSendingRealPosition() {
+      if (!navigator.geolocation) {
+        alert("Geolocation non supportee par ce navigateur");
+        return;
+      }
+
+      navigator.geolocation.watchPosition(
+        async (pos) => {
+          const payload = {
+            device_id: "camion-1",
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            timestamp: new Date().toISOString(),
+            accuracy: pos.coords.accuracy,
+            speed: pos.coords.speed ?? null,
+          };
+
+          try {
+            const res = await fetch("/position", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            console.log("Position envoyee:", res.status);
+          } catch (e) {
+            console.log("Erreur envoi position:", e);
+          }
+        },
+        (err) => console.log("Erreur GPS:", err),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
+      );
+    }
+
+
+    fetchPosition();
+    setInterval(fetchPosition, 5000); // refresh every 5s
+  </script>
+
+  <hr>
+<button onclick="startSendingRealPosition()" class="bg-green-600 active:px-3 active:py-1 text-white px-4 py-2 rounded">
+  Activer GPS reel
+</button>
+
+</body>
+</html>

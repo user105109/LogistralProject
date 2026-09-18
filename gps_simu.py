@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 API_URL = "http://127.0.0.1:8000/position"
 DEVICE_ID = "camion-1"
 
-lat, lon = 33.7897, -7.1575
+lat, lon =  33.5992, -7.6349
 
 while True:
     lat += random.uniform(-0.0002, 0.0002)

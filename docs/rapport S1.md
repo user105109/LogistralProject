@@ -1,76 +1,57 @@
 # Rapport de tests — Semaine 1
 
-Zouhair Messoudi — Stage
+Zouhair Messoudi — Stage Logistral
 
-## Ce qui a été fait cette semaine (en retard)
-J'ai mis en place la chaîne de base : un simulateur qui envoie des positions GPS
-(latitude, longitude, timestamp, accuracy, speed) vers une API FastAPI, qui valide
-les données et les enregistre dans une base SQLite.
+## Ce que j'ai fait cette semaine
 
-Stack utilisée : FastAPI + SQLModel + SQLite, pas encore de frontend.
+J'ai fait la base : un simulateur qui envoie des positions GPS (lat, long, timestamp, accuracy, speed) à une API FastAPI, qui vérifie les données et les enregistre dans une base SQLite.
 
-## Tests effectués
+Stack : FastAPI + SQLModel + SQLite. Pas de frontend encore, c'est prévu semaine 2.
 
-| Cas testé | Résultat attendu | Résultat obtenu | OK ? |
+## Tests faits
+
+| Test | Attendu | Obtenu | OK ? |
 |---|---|---|---|
-| Position complète et valide | 200, position enregistrée | 200, position enregistrée avec id (UUID) | oui |
+| Position valide complète | 200, enregistrée | 200, avec un id (UUID) | oui |
 | device_id manquant | 422 | 422 | oui |
-| latitude = 999 | 422 | 422 (après correction, voir anomalies) | oui |
+| latitude = 999 | 422 | 422 (après correction) | oui |
 | longitude = -222 | 422 | 422 (après correction) | oui |
 | accuracy négative | 422 | 422 (après correction) | oui |
 | speed négative | 422 | 422 (après correction) | oui |
-| timestamp mal formé ("hier") | 422 | 422 | oui |
+| timestamp bizarre ("hier") | 422 | 422 | oui |
 | timestamp vieux de 3 jours | 422 | 422 | oui |
 | timestamp dans le futur | 422 | 422 | oui |
-| accuracy/speed absents (optionnels) | 200, valeurs null | 200, valeurs null | oui |
-| Coupure réseau pendant l'envoi | le simulateur ne crash pas, reprend automatiquement | confirmé, testé en coupant uvicorn puis en le relançant | oui |
-| Envoi en continu (simulateur, plusieurs minutes) | pas de perte, pas de doublons d'id | à re-tester sur une durée plus longue | à refaire
+| accuracy/speed absents | 200, null | 200, null | oui |
+| Coupure réseau | le simulateur crash pas, reprend tout seul | ok, testé en coupant puis relançant uvicorn | oui |
+| Envoi continu plusieurs minutes | pas de perte/doublon | à retester sur plus longtemps | à refaire |
 
-## Anomalies rencontrées
+## Les problèmes que j'ai eu
 
-**1. SQLModel + table=True n'applique pas les validations Pydantic normalement**
+**1. SQLModel avec table=True qui valide pas correctement**
 
-C'était le plus gros blocage de la semaine. J'avais mis les contraintes de validation
-directement sur les champs (ex: `Field(ge=-90, le=90)` pour la latitude, un
-`field_validator` pour le timestamp), et ça ne marchait pas du tout — n'importe
-quelle valeur passait, même des trucs absurdes genre latitude = 999.
+Ça, ça m'a pris le plus de temps. J'avais mis des règles de validation sur les champs (genre `Field(ge=-90, le=90)` pour la latitude, un `field_validator` pour le timestamp) et ça marchait pas du tout. N'importe quoi passait, même latitude = 999.
 
-Après pas mal de recherches j'ai compris que quand une classe SQLModel a
-`table=True` (donc qu'elle sert aussi de table de base de données), elle ne
-passe pas forcément par la validation Pydantic complète comme une classe
-normale le ferait. C'est pas hyper documenté, j'ai mis du temps à comprendre
-que le code "avait l'air correct" mais ne s'exécutait juste jamais.
+Après avoir cherché, j'ai compris que quand une classe SQLModel sert aussi de table (avec `table=True`), elle valide pas vraiment comme une classe normale le ferait. C'est pas écrit clairement dans la doc, j'ai mis du temps à piger que mon code avait l'air bon mais s'exécutait juste jamais.
 
-Solution actuelle : j'ai déplacé toute la validation (coordonnées, timestamp)
-directement dans la fonction de l'endpoint, à la main, avant d'enregistrer en
-base. Ça marche, mais c'est moins propre que d'avoir la validation directement
-sur le modèle. À voir si je change d'approche plus tard (peut-être remettre
-deux classes séparées, une pour la validation et une pour la table, comme
-au tout début).
+Ce que j'ai fait : j'ai mis toute la validation à la main direct dans la fonction de l'endpoint, avant d'enregistrer. Ça marche mais c'est moins propre. Faudra peut-être revenir à deux classes séparées (une pour valider, une pour la table) comme au début.
 
-**2. Bug de format dans les logs**
+**2. Bug bête dans les logs**
 
-Petite erreur de frappe dans le format du logger (`%levelname)s` au lieu de
-`%(levelname)s`) qui faisait planter le logging lui-même à chaque erreur.
-Corrigé.
+J'avais fait une faute de frappe dans le format du logger (`%levelname)s` au lieu de `%(levelname)s`), ça faisait planter le logging à chaque erreur. Corrigé.
 
-**3. Erreur de type sur le timestamp au tout début**
+**3. Le timestamp qui passait pas au début**
 
-SQLite refusait d'enregistrer le timestamp parce qu'il arrivait encore sous
-forme de texte (string) et pas de vrai objet datetime Python. Réglé avec une
-conversion explicite dans l'endpoint.
+SQLite voulait pas enregistrer le timestamp parce qu'il arrivait en texte (string) et pas en vrai objet datetime Python. Réglé en le convertissant à la main dans l'endpoint.
 
-## Limites connues / pas encore fait
+## Ce qui manque encore
 
-- Pas de endpoint pour consulter l'historique (prévu J9, semaine 2)
-- Pas de gestion des doublons si deux positions arrivent avec le même timestamp
-- Le test "envoi en continu sur plusieurs minutes" n'a pas encore été fait sur une
-  durée assez longue pour être vraiment concluant
-- Pas encore de vraie authentification/sécurité sur l'API (pas demandé pour le
-  prototype pour l'instant)
+- Pas d'endpoint pour l'historique (prévu semaine 2)
+- Pas de gestion si deux positions arrivent avec le même timestamp
+- Le test "envoi continu longtemps" pas encore fait sérieusement
+- Pas d'authentification sur l'API (pas demandé pour l'instant)
 
 ## Pour la semaine prochaine
 
-- Endpoint GET pour récupérer la dernière position d'un device (presque fait)
-- Page HTML simple avec Tailwind pour afficher la position sur une carte (Leaflet)
+- Endpoint pour avoir la dernière position d'un device (presque fait)
+- Page HTML simple avec Tailwind + carte Leaflet
 - Historique par période
